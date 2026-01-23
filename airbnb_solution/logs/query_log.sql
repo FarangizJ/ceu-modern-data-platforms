@@ -1,23 +1,26 @@
--- created_at: 2026-01-09T07:51:07.284769+00:00
--- finished_at: 2026-01-09T07:51:07.550328+00:00
--- elapsed: 265ms
--- outcome: success
+-- created_at: 2026-01-23T10:11:40.440750+00:00
+-- finished_at: 2026-01-23T10:11:40.445938+00:00
+-- elapsed: 5ms
+-- outcome: canceled
 -- dialect: snowflake
--- node_id: not available
--- query_id: 01c19c97-0107-6fa8-0000-001ba55733a1
--- desc: execute adapter call
-CREATE TABLE IF NOT EXISTS DEV.audit_log ( model_name STRING, run_timestamp TIMESTAMP )
-/* {"app": "dbt", "connection_name": "", "dbt_version": "2.0.0", "profile_name": "airbnb", "target_name": "dev"} */;
--- created_at: 2026-01-09T07:51:08.641662+00:00
--- finished_at: 2026-01-09T07:51:08.960053+00:00
--- elapsed: 318ms
--- outcome: success
--- dialect: snowflake
--- node_id: not available
+-- node_id: test.airbnb.consistent_created_at.0dc3d99b2e
 -- query_id: not available
--- desc: dbt run query
-select * from (SELECT * FROM AIRBNB.DEV.dim_listings_cleansed WHERE 
-            LISTING_NAME IS NOT NULL AND LISTING_NAME <> '' AND
-            ROOM_TYPE IS NOT NULL AND ROOM_TYPE <> '' AND
-    TRUE
-) limit 10;
+-- desc: execute adapter call
+select
+      count(*) as failures,
+      count(*) != 0 as should_warn,
+      count(*) != 0 as should_error
+    from (
+      
+    
+  
+
+SELECT * FROM AIRBNB.DEV.dim_listings_cleansed l
+INNER JOIN AIRBNB.DEV.fct_reviews r
+USING (listing_id)
+WHERE l.created_at > r.review_date
+  
+  
+      
+    ) dbt_internal_test
+/* {"app": "dbt", "dbt_version": "2.0.0", "node_id": "test.airbnb.consistent_created_at.0dc3d99b2e", "profile_name": "airbnb", "target_name": "dev"} */;

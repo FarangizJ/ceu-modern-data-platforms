@@ -23,6 +23,7 @@ Data Engineering 2 - Modern Data Platforms: dbt, Snowflake, Databricks, Apache S
    - Windows (CMD): `.venv\Scripts\activate.bat`
    - WSL (Windows Subsystem for Linux): `source .venv/bin/activate`
    - macOS / Linux: `source .venv/bin/activate`
+
 ---
 
 ## Starting a dbt Project
@@ -61,7 +62,7 @@ models:
 
 Execute these queries in Snowflake:
 
-### Exercise 6: Explore the Data
+### Exercise 1: Explore the Data
 
 1. Take a look at the AIRBNB database / schemas / tables (you can use the Snowflake UI for this)
 2. Select 10 records from listings - review and understand the data
@@ -81,7 +82,7 @@ SELECT * FROM RAW_REVIEWS LIMIT 10;
 
 </details>
 
-### Exercise 7: Answer Questions with SQL
+### Exercise 2: Answer Questions with SQL
 
 Answer the following questions by writing SQL queries:
 
@@ -150,7 +151,7 @@ FROM
     raw_listings
 ```
 
-### Exercise 1: SRC Reviews
+### Exercise 3: SRC Reviews
 
 Create a model which builds on top of our `raw_reviews` table.
 
@@ -183,7 +184,7 @@ FROM
 
 </details>
 
-### Exercise 2: SRC Hosts
+### Exercise 4: SRC Hosts
 
 Create a model which builds on top of our `raw_hosts` table.
 
@@ -231,7 +232,7 @@ sources:
         identifier: raw_listings
 ```
 
-### Exercise 3: Add Hosts and Reviews Sources
+### Exercise 5: Add Hosts and Reviews Sources
 
 Add the `hosts` and `reviews` sources to your `models/sources.yml` file.
 Both should point to their respective raw tables (`raw_hosts` and `raw_reviews`) in the `raw` schema.
@@ -317,24 +318,23 @@ Also take a look at:
 
 ---
 
----
-### A loaded_at fields
+### Adding a loaded_at Field
 
-It's always a good idea to add a `loaded_at` field the stores the time of record creation to fct_reviews
+It's always a good idea to add a `loaded_at` field that stores the time of record creation to fct_reviews
 
 In `fct_reviews`, change
-```
-  SELECT *, current_timestamp()() AS loaded_at FROM {{ ref('src_reviews') }} -- Adding loaded_at column
+```sql
+  SELECT *, current_timestamp() AS loaded_at FROM {{ ref('src_reviews') }} -- Adding loaded_at column
 ```
 
 Then materialize only this model:
-```
+```sh
 dbt run --full-refresh --select fct_reviews
 ```
 
 ## Visualizing our graph
 Execute:
-```
+```sh
 dbt docs generate
 dbt docs serve
 ```
@@ -360,9 +360,10 @@ dbt source freshness
 ```
 
 Try it with a one-minute tolerance
-```
+```yaml
             warn_after: {count: 1, period: minute}
 ```
+
 ---
 
 ## Cleansed Models
@@ -398,11 +399,11 @@ FROM
 ```
 
 Materialize only `dim` models: _(`-s` is short for `--select`)
-```
+```sh
 dbt run -s dim
 ```
 
-### Exercise 4: DIM Hosts Cleansed
+### Exercise 6: DIM Hosts Cleansed
 
 Create a new model in the `models/dim/` folder called `dim_hosts_cleansed.sql`.
 Use a CTE to reference the `src_hosts` model.
@@ -436,7 +437,7 @@ FROM
 
 </details>
 
-### Exercise 5: DIM Listings with Hosts
+### Exercise 7: DIM Listings with Hosts
 
 Create a new model in the `models/dim/` folder called `dim_listings_w_hosts.sql`.
 Join `dim_listings_cleansed` with `dim_hosts_cleansed` to create a denormalized view that includes host information alongside listing data.
@@ -477,14 +478,16 @@ LEFT JOIN h ON (h.host_id = l.host_id)
 
 </details>
 
-### Exercise 6
-Take a look at your pipeline by generating the docs and starting the docs server 
+### Exercise 8: View Pipeline Docs
+Take a look at your pipeline by generating the docs and starting the docs server
 <details>
 <summary>Solution</summary>
-```
+
+```sh
 dbt docs generate
 dbt docs serve
 ```
+
 </details>
 
 ---
@@ -535,7 +538,7 @@ Sometimes you have smaller datasets that are not added to Snowflake by external 
 2) Run `dbt seeds`
 3) Check for the table on the snowflake UI
 
-### Exercise: Full Moon Reviews Mart
+### Exercise 9: Full Moon Reviews Mart
 
 Create a mart model that analyzes whether reviews were written during a full moon. This exercise combines your `fct_reviews` model with the `seed_full_moon_dates` seed data.
 
@@ -593,7 +596,7 @@ FROM
 
 </details>
 
-### Exercise: Full Moon Sentiment Analysis
+### Exercise 10: Full Moon Sentiment Analysis
 
 Create an **analysis** to investigate whether full moons affect review sentiment. Analyses are SQL files in the `analyses/` folder that are compiled but not materialized - they're useful for ad-hoc queries and reporting.
 
@@ -644,9 +647,10 @@ ORDER BY
 ---
 
 ## Snapshots
+
 Snapshots implement tracking of slowly changing dimensions: (see [Slowly changing dimension — Type 2 (SCD2)](https://en.wikipedia.org/wiki/Slowly_changing_dimension#Type_2))
 
-## Snapshots for listing
+### Snapshots for Listings
 The contents of `snapshots/snapshots.yml`:
 ```yaml
 snapshots:
@@ -660,12 +664,12 @@ snapshots:
 ```
 
 Materialize the snapshot:
-```
+```sh
 dbt snapshot
 ```
 
 Take a look at a single record:
-```
+```sql
 SELECT * FROM AIRBNB.DEV.SCD_RAW_LISTINGS WHERE ID=3176;
 ```
 
@@ -686,17 +690,17 @@ SELECT * FROM AIRBNB.RAW.RAW_LISTINGS WHERE ID=3176;
 Run `dbt snapshot` again
 
 Let's see the changes:
-```
+```sql
 SELECT * FROM AIRBNB.DEV.SCD_RAW_LISTINGS WHERE ID=3176;
 ```
 
 
 ### Building everything with the same command
-```
+```sh
 dbt build
 ```
 
-### Exercise
+### Exercise 11: SCD Raw Hosts Snapshot
 1) Create a snapshot for `raw_hosts`
 2) run it
 3) update raw_hosts
@@ -719,36 +723,37 @@ snapshots:
 </details>
 
 ## Tests
+
 ### Data Tests
-### Generic Data Tests
+
+#### Generic Data Tests
 The contents of `models/schema.yml`:
 
 ```yaml
 models:
   - name: dim_listings_cleansed
     columns:
+      - name: listing_id
+        data_tests:
+          - unique
+          - not_null
 
-     - name: listing_id
-       data_tests:
-         - unique
-         - not_null
+      - name: host_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_hosts_cleansed')
+                field: host_id
 
-     - name: host_id
-       data_tests:
-         - not_null
-         - relationships:
-             arguments:
-               to: ref('dim_hosts_cleansed')
-               field: host_id
-
-     - name: room_type
-       data_tests:
-         - accepted_values:
-             arguments:
-               values: ['Entire home/apt',
-                        'Private room',
-                        'Shared room',
-                        'Hotel room']
+      - name: room_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Entire home/apt',
+                         'Private room',
+                         'Shared room',
+                         'Hotel room']
 ```
 
 ### Singular Data Tests
@@ -796,20 +801,11 @@ unit_tests:
 dbt test -s mart_fullmoon_reviews
 ```
 
-      - name: reviews
-        identifier: raw_reviews
-        columns:
-          - name: sentiment
-            tests:
-              - not_null:
-                  config:
-                    severity: warn
-
 ### Setting Severity
-Let's test if the sentiment is not null in our sources, but we don't want to the test to fail 
+Let's test if the sentiment is not null in our sources, but we don't want the test to fail 
 the whole test workflow, only to give a warning.
 
-_Add the sentiment column definition to `models/sources.yml`:
+_Add the sentiment column definition to `models/sources.yml`_:
 ```
 sources:
   - name: airbnb
@@ -846,3 +842,315 @@ data_tests:
 
 ### Taking Testing in Production
 Here is the link to [Elementary Data](https://www.elementary-data.com/) if you want to take testing to the next level.
+
+### Exercise 12: Generic Tests for dim_hosts_cleansed
+
+Create generic data tests for the `dim_hosts_cleansed` model in `models/schema.yml`:
+
+- `host_id`: Should be unique and not contain null values
+- `host_name`: Should not contain any null values
+- `is_superhost`: Should only contain the values `'t'` and `'f'`
+
+Execute `dbt test` to verify that your tests are passing.
+
+<details>
+<summary>Solution</summary>
+
+Add this to `models/schema.yml`:
+
+```yaml
+  - name: dim_hosts_cleansed
+    columns:
+      - name: host_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: host_name
+        data_tests:
+          - not_null
+
+      - name: is_superhost
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['t', 'f']
+```
+
+</details>
+
+### Exercise 13: Singular Test for Consistent Created Dates
+
+Create a singular test in `tests/consistent_created_at.sql` that checks that there is no review date that is submitted before its listing was created.
+
+Make sure that every `review_date` in `fct_reviews` is more recent than the associated `created_at` in `dim_listings_cleansed`.
+
+**Hints:**
+- Use an INNER JOIN between the two tables on `listing_id`
+- Filter for rows where `created_at > review_date` (these are the problematic records)
+- Remember: singular tests should return rows that FAIL the test
+
+<details>
+<summary>Solution</summary>
+
+`tests/consistent_created_at.sql`:
+
+```sql
+SELECT * FROM {{ ref('dim_listings_cleansed') }} l
+INNER JOIN {{ ref('fct_reviews') }} r
+USING (listing_id)
+WHERE l.created_at > r.review_date
+```
+
+</details>
+
+### Exercise 14: Setting Test Severity to Warn
+
+Historically, review and listing date mismatch is a known data quality issue that we want to monitor but not block our pipeline, configure this test to emit a **warning** instead of an **error**.
+
+Add a config block to the test file (`tests/consistent_created_at.sql`):
+
+```sql
+{{
+  config(
+    severity = 'warn'
+  )
+}}
+```
+
+But when you run this tests, it actially passes, right? Simulate failure by flipping the relation and testing for `l.created_at <= r.review_date`. Once you confirmed that the test would give a warning, **revert this change** so that the test passes again.
+
+<details>
+<summary>Solution</summary>
+
+```sql
+{{
+  config(
+    severity = 'warn'
+  )
+}}
+
+SELECT * FROM {{ ref('dim_listings_cleansed') }} l
+INNER JOIN {{ ref('fct_reviews') }} r
+USING (listing_id)
+WHERE l.created_at <= r.review_date
+```
+
+</details>
+
+---
+
+## Third-party Packages
+
+dbt packages are reusable modules that extend dbt's functionality. You can find packages on the [dbt Hub](https://hub.getdbt.com/).
+
+### Adding dbt_utils
+
+[dbt_utils](https://hub.getdbt.com/dbt-labs/dbt_utils/latest/) provides useful macros for SQL generation.
+
+1. Create `packages.yml` in your project root:
+   ```yaml
+   packages:
+     - package: dbt-labs/dbt_utils
+       version: 1.3.3
+   ```
+
+2. Install dependencies:
+   ```sh
+   dbt deps
+   ```
+
+### Using Surrogate Keys
+
+Update `models/fct/fct_reviews.sql` to generate a surrogate key:
+
+```sql
+{{
+  config(
+    materialized = 'incremental',
+    on_schema_change='fail'
+    )
+}}
+
+WITH src_reviews AS (
+  SELECT * FROM {{ ref('src_reviews') }}
+)
+SELECT
+  {{ dbt_utils.generate_surrogate_key(['listing_id', 'review_date', 'reviewer_name', 'review_text']) }} as review_id,
+  *,
+  current_timestamp() AS loaded_at
+FROM src_reviews
+WHERE review_text is not null
+{% if is_incremental() %}
+  AND review_date > (select max(review_date) from {{ this }})
+{% endif %}
+```
+
+Run the model:
+```sh
+dbt run --select fct_reviews
+```
+
+This will **fail** because the schema changed (new column added) and `on_schema_change='fail'` is set.
+
+To rebuild from scratch:
+```sh
+dbt run --select fct_reviews --full-refresh
+```
+
+### Exercise 15: Add dbt-expectations
+
+[dbt-expectations](https://github.com/metaplane/dbt-expectations) is a package that provides additional data quality tests inspired by Great Expectations.
+
+1. Add dbt-expectations to `packages.yml`
+2. Run `dbt deps`
+3. Add a test using [expect_column_to_exist](https://github.com/metaplane/dbt-expectations?tab=readme-ov-file#expect_column_to_exist) on the `review_id` column in `models/schema.yml`
+4. Run `dbt test --select fct_reviews`
+
+<details>
+<summary>Solution</summary>
+
+`packages.yml`:
+```yaml
+packages:
+  - package: dbt-labs/dbt_utils
+    version: 1.3.3
+  - package: metaplane/dbt_expectations
+    version: 0.10.10
+```
+
+Add to `models/schema.yml`:
+```yaml
+  - name: fct_reviews
+    columns:
+      - name: review_id
+        data_tests:
+          - dbt_expectations.expect_column_to_exist
+```
+
+</details>
+
+---
+
+## Documentation
+
+dbt allows you to document your models and columns directly in the project using docs blocks and schema.yml descriptions.
+
+### Documenting Models in schema.yml
+
+Add descriptions directly to the `dim_listings_cleansed` model in `models/schema.yml`:
+
+```yaml
+  - name: dim_listings_cleansed
+    description: Cleansed table which contains Airbnb listings.
+    columns:
+      - name: listing_id
+        description: Primary key for the listing
+        data_tests:
+          - unique
+          - not_null
+
+      - name: host_id
+        description: The hosts's id. References the host table.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_hosts_cleansed')
+                field: host_id
+```
+
+### Viewing the Documentation
+
+Generate and serve the documentation:
+```sh
+dbt docs generate
+dbt docs serve
+```
+
+### Documenting Columns with Docs Blocks
+
+Create a new file `models/docs.md` with a docs block for the `minimum_nights` column:
+
+```md
+{% docs dim_listing_cleansed__minimum_nights %}
+Minimum number of nights required to rent this property.
+
+Keep in mind that old listings might have `minimum_nights` set to 0 in the source tables. Our cleansing algorithm updates this to `1`.
+
+{% enddocs %}
+```
+
+Reference this documentation in `models/schema.yml` by adding a description to the `minimum_nights` column under `dim_listings_cleansed`:
+
+```yaml
+      - name: minimum_nights
+        description: '{{ doc("dim_listing_cleansed__minimum_nights") }}'
+```
+
+### Landing Page
+
+You can customize the landing page of your dbt documentation by creating a special docs block named `__overview__`.
+
+Create or update `models/overview.md`:
+
+```md
+{% docs __overview__ %}
+# Airbnb pipeline
+
+Hey, welcome to our Airbnb pipeline documentation!
+
+{% enddocs %}
+```
+
+### Exercise 16: Document dim_hosts_cleansed
+
+Add documentation to `dim_hosts_cleansed` in `models/schema.yml`:
+
+1. Add a model-level `description` for `dim_hosts_cleansed`: "Cleansed table which contains Airbnb hosts."
+2. Add descriptions for the following columns:
+   - `host_id`: "Primary key for the host"
+   - `host_name`: "The name of the host"
+   - `is_superhost`: "Whether the host is a superhost"
+3. Create a docs block in `models/docs.md` for the `host_name` column called `dim_hosts_cleansed__host_name` that explains the cleansing process replaces null host names with 'Anonymous'
+4. Reference this docs block in the `host_name` column description
+5. Run `dbt docs generate && dbt docs serve` to view your documentation
+
+<details>
+<summary>Solution</summary>
+
+Add to `models/docs.md`:
+```md
+{% docs dim_hosts_cleansed__host_name %}
+The name of the host.
+
+If the host name was null in the source data, our cleansing process replaces it with 'Anonymous'.
+
+{% enddocs %}
+```
+
+Update `models/schema.yml` under `dim_hosts_cleansed`:
+```yaml
+  - name: dim_hosts_cleansed
+    description: Cleansed table which contains Airbnb hosts.
+    columns:
+      - name: host_id
+        description: Primary key for the host
+        data_tests:
+          - not_null
+          - unique
+
+      - name: host_name
+        description: '{{ doc("dim_hosts_cleansed__host_name") }}'
+        data_tests:
+          - not_null
+
+      - name: is_superhost
+        description: Whether the host is a superhost
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['t', 'f']
+```
+
+</details>
