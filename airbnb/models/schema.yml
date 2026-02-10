@@ -1,0 +1,20 @@
+version: 2
+
+models:
+  - name: src_listings
+    columns:
+      - name: room_type
+        tests:
+          - accepted_values:
+              values:
+                - 'Entire home/apt'
+                - 'Private room'
+                - 'Shared room'
+                - 'Hotel room'
+
+  - name: fct_reviews
+    columns:
+      - name: review_id
+        tests:
+          - not_null
+          - unique
